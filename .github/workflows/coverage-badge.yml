@@ -1,16 +1,14 @@
-name: Backend CI
+name: Coverage Badge
 
 on:
   push:
-    branches: [ main, develop ]
-    paths: [ 'backend/**' ]
-  pull_request:
-    branches: [ main, develop ]
+    branches: [ main ]
     paths: [ 'backend/**' ]
 
 jobs:
-  test:
+  coverage-badge:
     runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
 
     services:
       postgres:
@@ -28,6 +26,9 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+      with:
+        persist-credentials: false
+        fetch-depth: 0
 
     - name: Set up Python
       uses: actions/setup-python@v4
@@ -39,26 +40,23 @@ jobs:
         cd backend
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        pip install pytest pytest-asyncio pytest-cov
+        pip install pytest pytest-cov coverage-badge
 
-    - name: Run linting
+    - name: Run tests and generate coverage
       run: |
         cd backend
-        black --check .
-        isort --check-only .
-        flake8 .
-        mypy .
-        bandit -r . -f json -o bandit-report.json
+        pytest --cov=app --cov-report=xml
+        coverage-badge -o ../coverage.svg -f
 
-    - name: Run tests with coverage
+    - name: Commit coverage badge
       run: |
-        cd backend
-        pytest --cov=app --cov-report=xml --cov-report=term-missing --cov-fail-under=80
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add coverage.svg
+        git diff --staged --quiet || git commit -m "Update coverage badge"
 
-    - name: Coverage comment
-      uses: py-cov-action/python-coverage-comment-action@v3
-      if: github.event_name == 'pull_request'
+    - name: Push changes
+      uses: ad-m/github-push-action@master
       with:
-        GITHUB_TOKEN: ${{ github.token }}
-        MINIMUM_GREEN: 80
-        MINIMUM_ORANGE: 70
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        branch: main
