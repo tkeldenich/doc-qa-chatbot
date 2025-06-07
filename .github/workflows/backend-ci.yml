@@ -57,10 +57,15 @@ jobs:
       id: check_tests
       run: |
         cd backend
-        if find . -name "test_*.py" -o -name "*_test.py" | grep -q .; then
+        echo "Checking for test files..."
+        find . -name "test_*.py" -o -name "*_test.py" | head -10
+        if find . -name "test_*.py" -not -path "./.venv/*" -not -path "./venv/*" -not -path "./env/*" | grep -q . || \
+           find . -name "*_test.py" -not -path "./.venv/*" -not -path "./venv/*" -not -path "./env/*" | grep -q .; then
           echo "has_tests=true" >> $GITHUB_OUTPUT
+          echo "Found test files"
         else
           echo "has_tests=false" >> $GITHUB_OUTPUT
+          echo "No test files found"
         fi
 
     - name: Run tests with coverage
