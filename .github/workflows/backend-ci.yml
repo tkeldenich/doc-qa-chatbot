@@ -47,11 +47,11 @@ jobs:
     - name: Run linting
       run: |
         cd backend
-        uv run black --check .
-        uv run isort --check-only .
-        uv run flake8 .
-        uv run mypy .
-        uv run bandit -r . -f json -o bandit-report.json
+        uv run black --check . --exclude='/(\.venv|venv|env)/'
+        uv run isort --check-only . --skip-glob='*/.venv/*' --skip-glob='*/venv/*' --skip-glob='*/env/*'
+        uv run flake8 . --exclude=.venv,venv,env,__pycache__,.git
+        uv run mypy . --exclude='(\.venv|venv|env)'
+        uv run bandit -r . -f json -o bandit-report.json --exclude='./.venv,./venv,./env'
 
     - name: Run tests with coverage
       run: |
