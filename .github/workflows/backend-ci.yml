@@ -29,31 +29,33 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
+    - name: Set up uv
+      uses: astral-sh/setup-uv@v4
       with:
-        python-version: '3.11'
+        version: "latest"
+
+    - name: Set up Python
+      run: uv python install 3.12
 
     - name: Install dependencies
       run: |
         cd backend
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install pytest pytest-asyncio pytest-cov
+        uv pip install -r requirements.txt
+        uv pip install pytest pytest-asyncio pytest-cov black isort flake8 mypy bandit
 
     - name: Run linting
       run: |
         cd backend
-        black --check .
-        isort --check-only .
-        flake8 .
-        mypy .
-        bandit -r . -f json -o bandit-report.json
+        uv run black --check .
+        uv run isort --check-only .
+        uv run flake8 .
+        uv run mypy .
+        uv run bandit -r . -f json -o bandit-report.json
 
     - name: Run tests with coverage
       run: |
         cd backend
-        pytest --cov=app --cov-report=xml --cov-report=term-missing --cov-fail-under=80
+        uv run pytest --cov=app --cov-report=xml --cov-report=term-missing --cov-fail-under=80
 
     - name: Coverage comment
       uses: py-cov-action/python-coverage-comment-action@v3

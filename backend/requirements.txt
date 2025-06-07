@@ -1,3 +1,11 @@
+# Testing
 pytest-cov==4.1.0
 coverage==7.2.7
 coverage-badge==1.1.2
+
+# Linting & formatting
+bandit==1.8.3
+black==25.1.0
+isort==6.0.1
+flake8==7.2.0
+mypy==1.16.0

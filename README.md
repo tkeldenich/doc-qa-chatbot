@@ -15,7 +15,7 @@ A comprehensive document-based Q&A chatbot that leverages RAG (Retrieval Augment
 ## Quick Start
 
 ### Prerequisites
-- Python 3.11+
+- Python 3.12
 - Node.js 18+
 - Docker & Docker Compose
 - AWS CLI (for deployment)
