@@ -1,5 +1,8 @@
 # Document Q&A Chatbot
 
+![Coverage Badge](./coverage.svg)
+![CI](https://github.com/yourusername/doc-qa-chatbot/workflows/Backend%20CI/badge.svg)
+
 A comprehensive document-based Q&A chatbot that leverages RAG (Retrieval Augmented Generation) to provide intelligent answers from uploaded documents.
 
 ## Architecture
@@ -12,7 +15,7 @@ A comprehensive document-based Q&A chatbot that leverages RAG (Retrieval Augment
 ## Quick Start
 
 ### Prerequisites
-- Python 3.11+
+- Python 3.12
 - Node.js 18+
 - Docker & Docker Compose
 - AWS CLI (for deployment)
@@ -33,7 +36,7 @@ Copy `.env.example` to `.env` and configure:
 
 ## Project Structure
 - `/backend` - FastAPI application
-- `/frontend` - Next.js application  
+- `/frontend` - Next.js application
 - `/infrastructure` - Terraform and deployment configs
 - `/docs` - Project documentation
 

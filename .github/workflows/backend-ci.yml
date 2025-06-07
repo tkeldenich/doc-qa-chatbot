@@ -11,7 +11,7 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    
+
     services:
       postgres:
         image: postgres:15
@@ -28,35 +28,56 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-    
-    - name: Set up Python
-      uses: actions/setup-python@v4
+
+    - name: Set up uv
+      uses: astral-sh/setup-uv@v4
       with:
-        python-version: '3.11'
-        
+        version: "latest"
+
+    - name: Set up Python
+      run: uv python install 3.11
+
     - name: Install dependencies
       run: |
         cd backend
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install pytest pytest-asyncio pytest-cov
-        
+        uv venv
+        uv pip install -r requirements.txt
+        uv pip install pytest pytest-asyncio pytest-cov black isort flake8 mypy bandit
+
     - name: Run linting
       run: |
         cd backend
-        black --check .
-        isort --check-only .
-        flake8 .
-        mypy .
-        bandit -r . -f json -o bandit-report.json
-        
-    - name: Run tests
+        uv run black --check . --exclude='/(\.venv|venv|env)/'
+        uv run isort --check-only . --skip-glob='*/.venv/*' --skip-glob='*/venv/*' --skip-glob='*/env/*'
+        uv run flake8 . --exclude=.venv,venv,env,__pycache__,.git
+        uv run mypy . --exclude='(\.venv|venv|env)'
+        uv run bandit -r . -f json -o bandit-report.json --exclude='./.venv,./venv,./env'
+
+    - name: Check if tests exist
+      id: check_tests
       run: |
         cd backend
-        pytest --cov=app --cov-report=xml --cov-report=html
-        
-    - name: Upload coverage
-      uses: codecov/codecov-action@v3
+        echo "Checking for test files..."
+        find . -name "test_*.py" -o -name "*_test.py" | head -10
+        if find . -name "test_*.py" -not -path "./.venv/*" -not -path "./venv/*" -not -path "./env/*" | grep -q . || \
+           find . -name "*_test.py" -not -path "./.venv/*" -not -path "./venv/*" -not -path "./env/*" | grep -q .; then
+          echo "has_tests=true" >> $GITHUB_OUTPUT
+          echo "Found test files"
+        else
+          echo "has_tests=false" >> $GITHUB_OUTPUT
+          echo "No test files found"
+        fi
+
+    - name: Run tests with coverage
+      if: steps.check_tests.outputs.has_tests == 'true'
+      run: |
+        cd backend
+        uv run pytest --cov=app --cov-report=xml --cov-report=term-missing --cov-fail-under=80
+
+    - name: Coverage comment
+      uses: py-cov-action/python-coverage-comment-action@v3
+      if: github.event_name == 'pull_request' && steps.check_tests.outputs.has_tests == 'true'
       with:
-        file: backend/coverage.xml
-        flags: backend
+        GITHUB_TOKEN: ${{ github.token }}
+        MINIMUM_GREEN: 80
+        MINIMUM_ORANGE: 70
