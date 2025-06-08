@@ -62,6 +62,9 @@ jobs:
         # Run flake8 (linting)
         uv run flake8 . --exclude=.venv,venv,env,__pycache__,.git
 
+        # Install additional type packages needed for mypy
+        uv pip install types-python-jose types-passlib python-jose[cryptography] passlib[bcrypt]
+
         # Run mypy (type checking)
         uv pip install alembic types-setuptools
         uv run mypy app/ tests/ --exclude='(\.venv|venv|env)'
