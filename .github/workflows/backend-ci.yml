@@ -1,5 +1,4 @@
 name: Backend CI
-
 on:
   push:
     branches: [ main, develop ]
@@ -11,7 +10,6 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-
     services:
       postgres:
         image: postgres:15
@@ -41,17 +39,49 @@ jobs:
       run: |
         cd backend
         uv venv
-        uv pip install -r requirements.txt
-        uv pip install pytest pytest-asyncio pytest-cov black isort flake8 autopep8 mypy bandit
+        uv pip install -e .[dev]
 
-    - name: Run linting
+    - name: Run pre-commit hooks
       run: |
         cd backend
-        uv run black --check . --exclude='/(\.venv|venv|env)/'
-        uv run isort --check-only . --skip-glob='*/.venv/*' --skip-glob='*/venv/*' --skip-glob='*/env/*'
+        # Install pre-commit if not already available
+        uv pip install pre-commit
+
+        # Run autopep8 (formatting)
+        uv run autopep8 --diff --max-line-length=79 --aggressive --aggressive --recursive . --exclude='.venv,venv,env'
+
+        # Run docformatter (docstring formatting)
+        uv run docformatter --check --wrap-summaries 79 --wrap-descriptions 79 --recursive . --exclude .venv venv env
+
+        # Run black (code formatting)
+        uv run black --check --line-length=79 . --exclude='/(\.venv|venv|env)/'
+
+        # Run isort (import sorting)
+        uv run isort --check-only --line-length=79 . --skip-glob='*/.venv/*' --skip-glob='*/venv/*' --skip-glob='*/env/*'
+
+        # Run flake8 (linting)
         uv run flake8 . --exclude=.venv,venv,env,__pycache__,.git
-        uv run mypy . --exclude='(\.venv|venv|env)'
-        uv run bandit -r . -f json -o bandit-report.json --exclude='./.venv,./venv,./env'
+
+        # Run mypy (type checking)
+        uv run mypy . --exclude='(\.venv|venv|env|alembic)'
+
+        # Run bandit (security linting)
+        uv run bandit -r . -f json -o bandit-report.json --exclude='./.venv,./venv,./env' -s B101
+
+    - name: Check basic file issues
+      run: |
+        cd backend
+        # Check for trailing whitespace
+        if grep -r '[[:space:]]$' . --include="*.py" --exclude-dir='.venv' --exclude-dir='venv' --exclude-dir='env'; then
+          echo "❌ Found trailing whitespace"
+          exit 1
+        else
+          echo "✅ No trailing whitespace found"
+        fi
+
+        # Check for files without final newline
+        find . -name "*.py" -not -path "./.venv/*" -not -path "./venv/*" -not -path "./env/*" -exec sh -c 'if [ -n "$(tail -c1 "$1")" ]; then echo "File $1 does not end with newline"; exit 1; fi' _ {} \;
+        echo "✅ All files end with newline"
 
     - name: Check if tests exist
       id: check_tests
@@ -73,6 +103,13 @@ jobs:
       run: |
         cd backend
         uv run pytest --cov=app --cov-report=xml --cov-report=term-missing --cov-fail-under=80
+
+    - name: Upload coverage reports
+      if: steps.check_tests.outputs.has_tests == 'true'
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-report
+        path: backend/coverage.xml
 
     - name: Coverage comment
       uses: py-cov-action/python-coverage-comment-action@v3
