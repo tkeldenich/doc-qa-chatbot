@@ -9,7 +9,7 @@ from app.schemas.chat import ChatCreate, MessageCreate
 from app.services.base import CRUDBase
 
 
-class CRUDChat(CRUDBase[Chat, ChatCreate, dict]):
+class CRUDChat(CRUDBase[Chat, ChatCreate, ChatCreate]):
     async def get_by_user(
         self,
         db: AsyncSession,
@@ -41,7 +41,8 @@ class CRUDChat(CRUDBase[Chat, ChatCreate, dict]):
     async def create_with_user(
         self, db: AsyncSession, *, obj_in: ChatCreate, user_id: int
     ) -> Chat:
-        obj_in_data = obj_in.dict()
+        # Use model_dump() instead of dict() for Pydantic v2
+        obj_in_data = obj_in.model_dump()
         obj_in_data["user_id"] = user_id
         db_obj = Chat(**obj_in_data)
         db.add(db_obj)
@@ -50,7 +51,7 @@ class CRUDChat(CRUDBase[Chat, ChatCreate, dict]):
         return db_obj
 
 
-class CRUDMessage(CRUDBase[Message, MessageCreate, dict]):
+class CRUDMessage(CRUDBase[Message, MessageCreate, MessageCreate]):
     async def get_by_chat(
         self,
         db: AsyncSession,
@@ -70,7 +71,8 @@ class CRUDMessage(CRUDBase[Message, MessageCreate, dict]):
     async def create_with_chat(
         self, db: AsyncSession, *, obj_in: MessageCreate, chat_id: int
     ) -> Message:
-        obj_in_data = obj_in.dict()
+        # Use model_dump() instead of dict() for Pydantic v2
+        obj_in_data = obj_in.model_dump()
         obj_in_data["chat_id"] = chat_id
         db_obj = Message(**obj_in_data)
         db.add(db_obj)

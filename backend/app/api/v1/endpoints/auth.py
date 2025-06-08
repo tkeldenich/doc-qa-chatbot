@@ -1,3 +1,5 @@
+from typing import Any, Dict
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -31,9 +33,9 @@ async def login(
     return Token(access_token=access_token, token_type="bearer")  # nosec B106
 
 
-@router.post("/test-token", response_model=dict)
+@router.post("/test-token", response_model=Dict[str, Any])
 async def test_token(
-    current_user=Depends(deps.get_current_active_user),
-) -> dict:
+    current_user: Any = Depends(deps.get_current_active_user),
+) -> Dict[str, Any]:
     """Test access token."""
     return {"message": "Token is valid", "user_id": current_user.id}

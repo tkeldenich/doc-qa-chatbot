@@ -5,7 +5,7 @@ from app.main import app
 client = TestClient(app)
 
 
-def test_read_main():
+def test_read_main() -> None:
     """Test the root endpoint."""
     response = client.get("/")
     assert response.status_code == 200
@@ -15,7 +15,7 @@ def test_read_main():
     assert data["version"] == "0.1.0"
 
 
-def test_health_check():
+def test_health_check() -> None:
     """Test the health check endpoint."""
     response = client.get("/health")
     assert response.status_code == 200
@@ -24,7 +24,7 @@ def test_health_check():
     assert data["version"] == "0.1.0"
 
 
-def test_api_test_endpoint():
+def test_api_test_endpoint() -> None:
     """Test the API test endpoint."""
     response = client.get("/api/v1/test")
     assert response.status_code == 200

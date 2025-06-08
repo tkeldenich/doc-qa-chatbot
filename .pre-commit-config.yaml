@@ -51,8 +51,22 @@ repos:
     hooks:
       - id: mypy
         files: ^backend/.*\.py$
-        exclude: ^backend/(\.venv|venv|env)/
-        additional_dependencies: [alembic, types-setuptools]
+        exclude: ^backend/(\.venv|venv|env|alembic)/
+        additional_dependencies:
+          - fastapi==0.115.9
+          - pydantic==2.11.5
+          - pydantic-settings==2.9.1
+          - sqlalchemy==2.0.41
+          - alembic==1.16.1
+          - types-setuptools
+          - types-python-jose
+          - types-passlib
+          - python-jose[cryptography]
+          - passlib[bcrypt]
+          - email-validator==2.2.0
+          - python-multipart==0.0.20
+          - pytest==8.4.0
+        args: [--strict, --show-error-codes]
 
   - repo: https://github.com/PyCQA/bandit
     rev: 1.8.3

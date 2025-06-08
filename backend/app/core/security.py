@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 from typing import Any, Optional, Union
 
 from jose import jwt
+from jose.exceptions import JWTError  # Import the exception explicitly
 from passlib.context import CryptContext
 
 from app.core.config import settings
@@ -41,5 +42,5 @@ def verify_token(token: str) -> Union[str, None]:
             token, settings.SECRET_KEY, algorithms=[ALGORITHM]
         )
         return payload.get("sub")
-    except jwt.JWTError:
+    except JWTError:  # Use the explicitly imported exception
         return None

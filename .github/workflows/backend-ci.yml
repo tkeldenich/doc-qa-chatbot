@@ -63,7 +63,8 @@ jobs:
         uv run flake8 . --exclude=.venv,venv,env,__pycache__,.git
 
         # Run mypy (type checking)
-        uv run mypy . --exclude='(\.venv|venv|env|alembic)'
+        uv pip install alembic types-setuptools
+        uv run mypy app/ tests/ --exclude='(\.venv|venv|env)'
 
         # Run bandit (security linting)
         uv run bandit -r . -f json -o bandit-report.json --exclude='./.venv,./venv,./env' -s B101

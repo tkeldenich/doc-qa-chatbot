@@ -1,6 +1,6 @@
 import hashlib
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import Any, Dict, Optional
 
 from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -40,7 +40,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
 # Fake user database (we'll replace with real DB later)
 # Note: In production, you'd load this from a real database
-fake_users_db = {
+fake_users_db: Dict[str, Dict[str, str]] = {
     "test@example.com": {
         "username": "test@example.com",
         "full_name": "Test User",
@@ -64,7 +64,9 @@ app.add_middleware(
 )
 
 
-def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
+def create_access_token(
+    data: Dict[str, Any], expires_delta: Optional[timedelta] = None
+) -> str:
     to_encode = data.copy()
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
@@ -75,23 +77,28 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     return encoded_jwt
 
 
-def get_user(username: str):
+def get_user(username: str) -> Optional[Dict[str, str]]:
     if username in fake_users_db:
         user_dict = fake_users_db[username]
         return user_dict
     return None
 
 
-def authenticate_user(username: str, password: str):
+def authenticate_user(
+    username: str, password: str
+) -> Optional[Dict[str, str]]:
+    """Authenticate user and return user data if successful, None if failed."""
     user = get_user(username)
     if not user:
-        return False
+        return None
     if not verify_password(password, user["hashed_password"]):
-        return False
+        return None
     return user
 
 
-async def get_current_user(token: str = Depends(oauth2_scheme)):
+async def get_current_user(
+    token: str = Depends(oauth2_scheme),
+) -> Dict[str, str]:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -99,7 +106,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
     )
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        username: str = payload.get("sub")
+        username: Optional[str] = payload.get("sub")
         if username is None:
             raise credentials_exception
     except JWTError:
@@ -111,7 +118,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
 
 
 @app.get("/")
-async def root():
+async def root() -> Dict[str, str]:
     return {
         "message": settings.PROJECT_NAME,
         "version": settings.VERSION,
@@ -120,13 +127,13 @@ async def root():
 
 
 @app.get("/health")
-async def health_check():
+async def health_check() -> Dict[str, str]:
     return {"status": "healthy", "version": settings.VERSION}
 
 
 # Test configuration
 @app.get("/config-test")
-async def config_test():
+async def config_test() -> Dict[str, Any]:
     return {
         "project_name": settings.PROJECT_NAME,
         "debug": settings.DEBUG,
@@ -135,7 +142,9 @@ async def config_test():
 
 
 @app.post("/api/v1/auth/login")
-async def login(form_data: OAuth2PasswordRequestForm = Depends()):
+async def login(
+    form_data: OAuth2PasswordRequestForm = Depends(),
+) -> Dict[str, str]:
     user = authenticate_user(form_data.username, form_data.password)
     if not user:
         raise HTTPException(
@@ -151,7 +160,9 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
 
 
 @app.get("/api/v1/auth/me")
-async def read_users_me(current_user: dict = Depends(get_current_user)):
+async def read_users_me(
+    current_user: Dict[str, str] = Depends(get_current_user),
+) -> Dict[str, str]:
     return {
         "username": current_user["username"],
         "email": current_user["email"],
@@ -160,7 +171,9 @@ async def read_users_me(current_user: dict = Depends(get_current_user)):
 
 
 @app.get("/api/v1/protected")
-async def protected_route(current_user: dict = Depends(get_current_user)):
+async def protected_route(
+    current_user: Dict[str, str] = Depends(get_current_user),
+) -> Dict[str, str]:
     return {
         "message": f"Hello {
             current_user['full_name']}, this is a protected route!"
@@ -168,7 +181,9 @@ async def protected_route(current_user: dict = Depends(get_current_user)):
 
 
 @app.get("/api/v1/test-protected")
-async def protected_endpoint(current_user: dict = Depends(get_current_user)):
+async def protected_endpoint(
+    current_user: Dict[str, str] = Depends(get_current_user),
+) -> Dict[str, str]:
     return {
         "message": "This is now properly protected!",
         "user": current_user["username"],
@@ -177,7 +192,7 @@ async def protected_endpoint(current_user: dict = Depends(get_current_user)):
 
 # Debug endpoint to test password hashing - only available in development
 @app.get("/api/v1/debug/test-hash")
-async def test_hash():
+async def test_hash() -> Dict[str, Any]:
     if settings.ENVIRONMENT != "development":
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

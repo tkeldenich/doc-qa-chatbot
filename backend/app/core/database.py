@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import (
     async_sessionmaker,
     create_async_engine,
 )
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy.pool import NullPool
 
 from app.core.config import settings
@@ -22,8 +22,11 @@ AsyncSessionLocal = async_sessionmaker(
     engine, class_=AsyncSession, expire_on_commit=False
 )
 
-# Create declarative base
-Base = declarative_base()
+# Create declarative base using modern SQLAlchemy 2.0 style
+
+
+class Base(DeclarativeBase):
+    id: Mapped[int] = mapped_column(primary_key=True)
 
 
 # Dependency to get DB session
