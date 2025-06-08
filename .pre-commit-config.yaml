@@ -76,6 +76,16 @@ repos:
         exclude: ^backend/(\.venv|venv|env)/
         args: ['-s', 'B101']
 
+  - repo: local
+    hooks:
+      - id: pytest
+        name: pytest
+        entry: bash -c 'cd backend && uv run pytest'
+        language: system
+        files: ^backend/.*\.py$
+        pass_filenames: false
+        always_run: true
+
   - repo: https://github.com/eslint/eslint
     rev: v8.42.0
     hooks:
