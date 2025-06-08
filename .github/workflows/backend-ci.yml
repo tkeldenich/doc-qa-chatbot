@@ -104,6 +104,8 @@ jobs:
 
     - name: Run tests with coverage
       if: steps.check_tests.outputs.has_tests == 'true'
+      env:
+        DATABASE_URL: ${{ secrets.DATABASE_URL }}
       run: |
         cd backend
         uv run pytest --cov=app --cov-report=xml --cov-report=term-missing --cov-fail-under=80
