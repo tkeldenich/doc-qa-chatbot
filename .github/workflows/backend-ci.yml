@@ -35,14 +35,14 @@ jobs:
         version: "latest"
 
     - name: Set up Python
-      run: uv python install 3.11
+      run: uv python install 3.12
 
     - name: Install dependencies
       run: |
         cd backend
         uv venv
         uv pip install -r requirements.txt
-        uv pip install pytest pytest-asyncio pytest-cov black isort flake8 mypy bandit
+        uv pip install pytest pytest-asyncio pytest-cov black isort flake8 autopep8 mypy bandit
 
     - name: Run linting
       run: |

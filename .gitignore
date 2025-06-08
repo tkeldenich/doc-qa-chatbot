@@ -87,3 +87,23 @@ coverage/
 .coverage
 htmlcov/
 .pytest_cache/
+
+# UV lock file
+uv.lock
+backend/uv.lock
+
+
+# uv lock file (Python package manager)
+# Keep this if you want to lock dependencies, or add to gitignore if you prefer flexibility
+# uv.lock
+
+# Alembic database migration byte code
+backend/alembic/versions/__pycache__/
+
+# Temporary files
+tmp/
+temp/
+
+# Local data directories
+data/
+*.local

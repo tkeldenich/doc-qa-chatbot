@@ -1,6 +1,6 @@
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.4.0
+    rev: v5.0.0
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
@@ -8,22 +8,39 @@ repos:
       - id: check-added-large-files
       - id: check-merge-conflict
 
+  - repo: https://github.com/hhatto/autopep8
+    rev: v2.3.1
+    hooks:
+      - id: autopep8
+        files: ^backend/.*\.py$
+        exclude: ^backend/(\.venv|venv|env)/
+        args: [--in-place, --max-line-length=79, --aggressive, --aggressive]
+
+  - repo: https://github.com/PyCQA/docformatter
+    rev: v1.7.7
+    hooks:
+      - id: docformatter
+        files: ^backend/.*\.py$
+        exclude: ^backend/(\.venv|venv|env)/
+        args: [--in-place, --wrap-summaries, "79", --wrap-descriptions, "79"]
+
   - repo: https://github.com/psf/black
-    rev: 23.3.0
+    rev: 25.1.0
     hooks:
       - id: black
         files: ^backend/.*\.py$
         exclude: ^backend/(\.venv|venv|env)/
 
   - repo: https://github.com/pycqa/isort
-    rev: 5.12.0
+    rev: 6.0.1
     hooks:
       - id: isort
         files: ^backend/.*\.py$
         exclude: ^backend/(\.venv|venv|env)/
+        args: [--line-length=79]
 
   - repo: https://github.com/pycqa/flake8
-    rev: 6.0.0
+    rev: 7.2.0
     hooks:
       - id: flake8
         files: ^backend/.*\.py$
@@ -35,13 +52,15 @@ repos:
       - id: mypy
         files: ^backend/.*\.py$
         exclude: ^backend/(\.venv|venv|env)/
+        additional_dependencies: [alembic, types-setuptools]
 
   - repo: https://github.com/PyCQA/bandit
-    rev: 1.7.5
+    rev: 1.8.3
     hooks:
       - id: bandit
         files: ^backend/.*\.py$
         exclude: ^backend/(\.venv|venv|env)/
+        args: ['-s', 'B101']
 
   - repo: https://github.com/eslint/eslint
     rev: v8.42.0

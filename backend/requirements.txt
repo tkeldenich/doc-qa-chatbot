@@ -1,11 +1,63 @@
 # Testing
+pytest==8.4.0
 pytest-cov==4.1.0
+pytest-asyncio==1.0.0
 coverage==7.2.7
 coverage-badge==1.1.2
 
 # Linting & formatting
+autopep8==2.3.2
 bandit==1.8.3
 black==25.1.0
+docformatter==1.7.7
 isort==6.0.1
 flake8==7.2.0
 mypy==1.16.0
+
+# Web Framework
+fastapi==0.115.9
+uvicorn[standard]==0.34.3
+
+# Database
+sqlalchemy==2.0.41
+alembic==1.16.1
+greenlet==3.2.3
+asyncpg==0.30.0  # PostgreSQL async driver
+psycopg2-binary==2.9.10  # PostgreSQL sync driver
+
+# Pydantic & Validation
+pydantic==2.11.5
+pydantic-settings==2.9.1
+email-validator==2.2.0
+
+# Authentication & Security
+python-multipart==0.0.20
+
+# LangChain & AI
+langchain==0.3.25
+langchain-community==0.3.24
+langchain-openai==0.3.21
+openai==1.84.0
+
+# Vector Database
+chromadb==1.0.12
+# pinecone-client  # Alternative
+
+# Search & Indexing
+elasticsearch==9.0.2
+
+# Document Processing
+pypdf==5.6.0
+python-docx==1.1.2
+sentence-transformers==4.1.0
+
+# Cloud & Storage
+boto3==1.38.32
+redis==6.2.0
+
+# Background Tasks
+celery==5.5.3
+
+# Utilities
+python-dotenv==1.1.0
+httpx==0.28.1
