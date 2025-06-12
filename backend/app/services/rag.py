@@ -161,7 +161,7 @@ Answer:"""
             # Handle case where content might be a list
             return " ".join(str(item) for item in response.content)
         else:
-            return str(response.content)
+            return str(response.content) # type: ignore[unreachable]
 
     def _format_sources(
         self, context_chunks: List[Dict[str, Any]]
