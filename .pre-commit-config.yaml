@@ -73,7 +73,6 @@ repos:
           - celery-types
         args: [--strict, --show-error-codes]
 
-
   - repo: https://github.com/PyCQA/bandit
     rev: 1.8.3
     hooks:
