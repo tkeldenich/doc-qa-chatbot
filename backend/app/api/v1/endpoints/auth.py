@@ -8,9 +8,30 @@ from app.api import deps
 from app.core.database import get_db
 from app.core.security import create_access_token
 from app.schemas.token import Token
+from app.schemas.user import User, UserCreate
 from app.services.user import user_service
 
 router = APIRouter()
+
+
+@router.post("/register", response_model=User)
+async def register(
+    *,
+    db: AsyncSession = Depends(get_db),
+    user_in: UserCreate,
+) -> User:
+    """Register a new user."""
+    # Check if user already exists
+    user = await user_service.get_by_email(db, email=user_in.email)
+    if user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="The user with this email already exists in the system.",
+        )
+
+    # Create new user
+    db_user = await user_service.create(db, obj_in=user_in)
+    return User.model_validate(db_user)
 
 
 @router.post("/login", response_model=Token)

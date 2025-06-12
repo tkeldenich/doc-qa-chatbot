@@ -1,181 +1,191 @@
-import hashlib
 import os
-import tempfile
-import uuid
-from pathlib import Path
-from typing import Any, List
+from typing import Any, Dict, List
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    File,
+    HTTPException,
+    UploadFile,
+)
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api import deps
-from app.core.config import settings
+from app.api.deps import get_current_active_user
 from app.core.database import get_db
 from app.models.user import User
-from app.schemas.document import Document as DocumentSchema
-from app.schemas.document import DocumentCreate
+from app.schemas.document import Document, DocumentCreate
 from app.services.document import document_service
-from app.services.user import user_service
+from app.services.document_processor import document_processor
+from app.utils.file_utils import (
+    generate_file_hash,
+    save_uploaded_file,
+    validate_file,
+)
 
 router = APIRouter()
 
 
-def create_secure_temp_file(file: UploadFile) -> str:
-    """Create a secure temporary file with proper naming and location.
+async def validate_file_wrapper(file: UploadFile) -> Dict[str, Any]:
+    """Wrapper for validate_file to ensure proper return type."""
+    return await validate_file(file)
 
-    Returns the path to the temporary file.
-    """
-    # Get file extension safely
-    file_extension = ""
-    if file.filename:
-        file_extension = Path(file.filename).suffix
 
-        # Validate file extension against allowed types
-        if file_extension.lower() not in settings.ALLOWED_FILE_TYPES:
-            raise HTTPException(
-                status_code=400,
-                detail=(
-                    f"File type {file_extension} not allowed. "
-                    f"Allowed types: {settings.ALLOWED_FILE_TYPES}"
-                ),
-            )
+@router.post("/upload", response_model=Document)
+async def upload_document(
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+) -> Document:
+    """Upload and process a document."""
 
-    # Create a secure temporary file with a random name
-    temp_fd, temp_path = tempfile.mkstemp(
-        suffix=file_extension, prefix=f"upload_{uuid.uuid4().hex[:8]}_"
+    # Validate file
+    validation_result = await validate_file_wrapper(file)
+    if not validation_result["valid"]:
+        raise HTTPException(status_code=400, detail=validation_result["error"])
+
+    # Save file
+    file_path = await save_uploaded_file(file, current_user.id)
+
+    # Calculate file hash
+    file_hash = await generate_file_hash(file_path)
+
+    # Check if document already exists
+    existing_doc = await document_service.get_by_hash(
+        db, content_hash=file_hash
+    )
+    if existing_doc:
+        # Remove the uploaded file since we already have it
+        os.remove(file_path)
+        raise HTTPException(
+            status_code=409,
+            detail="Document already exists",
+            headers={"X-Existing-Document-ID": str(existing_doc.id)},
+        )
+
+    # Ensure filename is not None
+    filename = file.filename or "unknown_file"
+
+    # Create document record
+    document_data = DocumentCreate(
+        filename=filename,
+        original_filename=filename,
+        file_path=file_path,
+        file_size=validation_result["size"],
+        file_type=validation_result["file_type"],
+        content_hash=file_hash,
     )
 
-    # Close the file descriptor since we'll handle the file ourselves
-    os.close(temp_fd)
+    document = await document_service.create_with_owner(
+        db, obj_in=document_data, owner_id=current_user.id
+    )
 
-    return temp_path
+    # Process document in background
+    background_tasks.add_task(
+        document_processor.process_document, db, document.id, file_path
+    )
 
-
-def calculate_file_hash(file_path: str) -> str:
-    """Calculate SHA256 hash of a file."""
-    sha256_hash = hashlib.sha256()
-    with open(file_path, "rb") as f:
-        # Read file in chunks to handle large files efficiently
-        for chunk in iter(lambda: f.read(4096), b""):
-            sha256_hash.update(chunk)
-    return sha256_hash.hexdigest()
+    # Convert model to schema
+    return Document.from_orm(document)
 
 
-@router.get("/", response_model=List[DocumentSchema])
-async def read_documents(
-    db: AsyncSession = Depends(get_db),
+@router.get("/", response_model=List[Document])
+async def list_documents(
     skip: int = 0,
     limit: int = 100,
-    current_user: User = Depends(deps.get_current_active_user),
-) -> Any:
-    """Retrieve documents for current user."""
-    documents = await document_service.get_by_owner(
-        db=db, owner_id=current_user.id, skip=skip, limit=limit
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+) -> List[Document]:
+    """List user's documents."""
+    # Query documents filtered by owner directly
+    from app.models.document import Document as DocumentModel
+
+    result = await db.execute(
+        select(DocumentModel)
+        .filter(DocumentModel.owner_id == current_user.id)
+        .offset(skip)
+        .limit(limit)
     )
-    return documents
+    documents = result.scalars().all()
+
+    # Convert models to schemas
+    return [Document.from_orm(doc) for doc in documents]
 
 
-@router.post("/upload", response_model=DocumentSchema)
-async def upload_document(
-    *,
-    db: AsyncSession = Depends(get_db),
-    file: UploadFile = File(...),
-    current_user: User = Depends(deps.get_current_active_user),
-) -> Any:
-    """Upload a new document."""
-    if not file.filename:
-        raise HTTPException(status_code=400, detail="No file provided")
-
-    # Check file size
-    content = await file.read()
-    if len(content) > settings.MAX_FILE_SIZE:
-        raise HTTPException(
-            status_code=413,
-            detail=f"File too large. Maximum size: {
-                settings.MAX_FILE_SIZE} bytes",
-        )
-
-    # Reset file pointer for re-reading if needed
-    await file.seek(0)
-
-    temp_path = None
-    try:
-        # Create secure temporary file
-        temp_path = create_secure_temp_file(file)
-
-        # Save uploaded file to temporary location
-        with open(temp_path, "wb") as temp_file:
-            temp_file.write(content)
-
-        # Calculate file hash
-        content_hash = calculate_file_hash(temp_path)
-
-        # Create document record
-        document_in = DocumentCreate(
-            filename=file.filename,
-            original_filename=file.filename,
-            file_path=temp_path,  # Now using secure temp path
-            file_size=len(content),
-            file_type=file.content_type or "unknown",
-            content_hash=content_hash,
-        )
-
-        document = await document_service.create_with_owner(
-            db=db, obj_in=document_in, owner_id=current_user.id
-        )
-
-        return document
-
-    except Exception as e:
-        # Clean up temporary file if something goes wrong
-        if temp_path and os.path.exists(temp_path):
-            try:
-                os.unlink(temp_path)
-            except OSError:
-                pass  # File cleanup failed, but don't mask the original error
-        raise e
-
-
-@router.get("/{document_id}", response_model=DocumentSchema)
-async def read_document(
-    *,
-    db: AsyncSession = Depends(get_db),
+@router.get("/{document_id}", response_model=Document)
+async def get_document(
     document_id: int,
-    current_user: User = Depends(deps.get_current_active_user),
-) -> Any:
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+) -> Document:
     """Get document by ID."""
-    document = await document_service.get(db=db, id=document_id)
+    document = await document_service.get(db, id=document_id)
     if not document:
         raise HTTPException(status_code=404, detail="Document not found")
-    if document.owner_id != current_user.id and not user_service.is_superuser(
-        current_user
-    ):
-        raise HTTPException(status_code=400, detail="Not enough permissions")
-    return document
+
+    if document.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+
+    # Convert model to schema
+    return Document.from_orm(document)
 
 
 @router.delete("/{document_id}")
 async def delete_document(
-    *,
-    db: AsyncSession = Depends(get_db),
     document_id: int,
-    current_user: User = Depends(deps.get_current_active_user),
-) -> Any:
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+) -> Dict[str, str]:
     """Delete a document."""
-    document = await document_service.get(db=db, id=document_id)
+    document = await document_service.get(db, id=document_id)
     if not document:
         raise HTTPException(status_code=404, detail="Document not found")
-    if document.owner_id != current_user.id and not user_service.is_superuser(
-        current_user
-    ):
-        raise HTTPException(status_code=400, detail="Not enough permissions")
 
-    # Clean up file from filesystem
-    if document.file_path and os.path.exists(document.file_path):
-        try:
-            os.unlink(document.file_path)
-        except OSError:
-            pass  # File cleanup failed, but continue with database deletion
+    if document.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not enough permissions")
 
-    await document_service.remove(db=db, id=document_id)
+    # Delete from vector store and elasticsearch in background
+    from app.services.elasticsearch_service import elasticsearch_service
+    from app.services.vector_store import vector_store_service
+
+    background_tasks.add_task(
+        vector_store_service.delete_document, document_id
+    )
+    background_tasks.add_task(
+        elasticsearch_service.delete_document_chunks, document_id
+    )
+
+    # Delete file
+    if os.path.exists(document.file_path):
+        os.remove(document.file_path)
+
+    # Delete from database
+    await document_service.remove(db, id=document_id)
+
     return {"message": "Document deleted successfully"}
+
+
+@router.get("/{document_id}/status")
+async def get_processing_status(
+    document_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+) -> Dict[str, Any]:
+    """Get document processing status."""
+    document = await document_service.get(db, id=document_id)
+    if not document:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    if document.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+
+    return {
+        "document_id": document.id,
+        "status": document.processing_status,
+        "chunk_count": document.chunk_count,
+        "error_message": document.error_message,
+        "processed_at": document.processed_at,
+    }
