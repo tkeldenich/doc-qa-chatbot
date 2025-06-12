@@ -46,10 +46,7 @@ jobs:
         cd backend
         # Install pre-commit if not already available
         uv pip install pre-commit
-
-        # Run autopep8 (formatting)
-        uv run autopep8 --diff --max-line-length=79 --aggressive --aggressive --recursive . --exclude='.venv,venv,env'
-
+        
         # Run docformatter (docstring formatting)
         uv run docformatter --check --wrap-summaries 79 --wrap-descriptions 79 --recursive . --exclude .venv venv env
 
