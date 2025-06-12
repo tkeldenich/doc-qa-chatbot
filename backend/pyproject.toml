@@ -7,7 +7,7 @@ name = "doc-qa-chatbot"
 version = "0.1.0"
 description = "Document-based Q&A chatbot with RAG capabilities"
 authors = [{name = "Your Name", email = "your.email@example.com"}]
-license = "MIT"  # Fixed: changed from {text = "MIT"} to simple string
+license = "MIT"
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.115.9",
@@ -21,17 +21,16 @@ dependencies = [
     "email-validator>=2.2.0",
     "python-multipart>=0.0.20",
     "langchain>=0.3.25",
-    "langchain-community>=0.3.24",
     "langchain-openai>=0.3.21",
+    "langchain-community==0.3.24",
     "openai>=1.84.0",
     "chromadb>=1.0.12",
-    "elasticsearch>=9.0.2",
+    "elasticsearch>=8.18.1",
     "pypdf>=5.6.0",
     "python-docx>=1.1.2",
-    "sentence-transformers>=4.1.0",
     "boto3>=1.38.32",
     "redis>=6.2.0",
-    "celery>=5.5.3",
+    "celery==5.5.3",
     "python-dotenv>=1.1.0",
     "httpx>=0.28.1",
     "psycopg2-binary>=2.9.10",
@@ -44,7 +43,6 @@ dev = [
     "pytest-asyncio==1.0.0",
     "coverage==7.2.7",
     "coverage-badge==1.1.2",
-    "autopep8==2.3.2",
     "bandit==1.8.3",
     "black==25.1.0",
     "docformatter==1.7.7",
@@ -57,16 +55,10 @@ dev = [
     "passlib[bcrypt]>=1.7.4",
 ]
 
-# Fixed: Added package discovery to exclude alembic
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["app*"]
 exclude = ["alembic*", "tests*", "*.tests*"]
-
-[tool.autopep8]
-max_line_length = 79
-aggressive = 2
-exclude = "*/migrations/*,*/venv/*,*/env/*,*/.venv/*"
 
 [tool.docformatter]
 wrap-summaries = 79

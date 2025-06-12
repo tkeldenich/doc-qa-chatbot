@@ -42,3 +42,41 @@ class Chat(ChatBase):
 
     class Config:
         from_attributes = True
+
+
+# API Request/Response Models
+class QuestionRequest(BaseModel):
+    """Request model for asking questions."""
+
+    question: str
+    chat_id: Optional[int] = None
+    document_ids: Optional[List[int]] = None
+    model_provider: str = "openai"
+    use_hybrid_search: bool = True
+
+
+class QuestionResponse(BaseModel):
+    """Response model for chat questions."""
+
+    chat_id: int
+    question: str
+    answer: str
+    sources: List[Dict[str, Any]]
+    context_used: List[str]
+    metadata: Dict[str, Any]
+    message_id: int
+
+
+class SourceInfo(BaseModel):
+    """Information about document sources."""
+
+    chunk_id: str
+    document_id: Optional[int] = None
+    score: float
+    preview: str
+
+
+class DeleteResponse(BaseModel):
+    """Response model for delete operations."""
+
+    message: str

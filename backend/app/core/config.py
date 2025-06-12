@@ -64,7 +64,7 @@ class Settings(BaseSettings):
 
     # AI Services
     OPENAI_API_KEY: Optional[str] = None
-    ANTHROPIC_API_KEY: Optional[str] = None
+    MODEL_NAME: Optional[str] = None
 
     # Vector Database
     CHROMADB_PATH: str = "./data/chromadb"
@@ -85,11 +85,6 @@ class Settings(BaseSettings):
     # File Upload
     MAX_FILE_SIZE: int = 50 * 1024 * 1024  # 50MB
     ALLOWED_FILE_TYPES: List[str] = [".pdf", ".docx", ".txt", ".md"]
-
-    # Embedding
-    EMBEDDING_MODEL: str = "sentence-transformers/all-MiniLM-L6-v2"
-    CHUNK_SIZE: int = 1000
-    CHUNK_OVERLAP: int = 200
 
     # Environment
     ENVIRONMENT: str = "development"
